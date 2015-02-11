@@ -67,8 +67,12 @@
        (cffi:defcallback ,callback-name ,return-type ,args-and-types
          ;; Ensure we can do a recursive call.
          (flet ((,name ,args
-                  (,callback-name ,@args)))
-           (declare (inline ,name))
+                  #-sbcl
+                  (,callback-name ,@args)
+                  #+sbcl
+                  (error "Cannot recursively call a callback.")))
+           (declare (inline ,name)
+                    (ignorable (function ,name)))
            ,@body))
        
        (setf (api-group-function (api-group ',group-name) ',name)
