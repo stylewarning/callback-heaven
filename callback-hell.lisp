@@ -128,15 +128,18 @@
           :finally (return (values
                             function-index)))))
 
+(defvar *api-group-translations* (make-hash-table :test 'eq))
+
 (defun compute-c-space-translation (api-group)
   (multiple-value-bind (function-index index-translations)
       (foreign-function-index api-group)
-    (make-c-space-translation
-     :api-group api-group
-     :index-translations index-translations
-     :function-index-c-name (format nil "function_index_group_~A"
-                                    (cffi:translate-name-to-foreign (api-group-name api-group) nil))
-     :function-index function-index)))
+    (setf (gethash api-group *api-group-translations*)
+          (make-c-space-translation
+           :api-group api-group
+           :index-translations index-translations
+           :function-index-c-name (format nil "function_index_group_~A"
+                                          (cffi:translate-name-to-foreign (api-group-name api-group) nil))
+           :function-index function-index))))
 
 
 (defvar *default-includes* (list "<stdint.h>" "<stddef.h>"))
