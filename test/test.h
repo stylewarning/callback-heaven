@@ -7,9 +7,9 @@
 
 void set_function_index_group_test(void** functions);
 
-void print_factorial(int n);
-
 int add(int a, int b);
+
+void print_factorial(int n);
 
 
 #endif /* GROUP_TEST_HEADER_GUARD */

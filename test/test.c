@@ -9,12 +9,12 @@ void set_function_index_group_test(void **functions) {
 }
 
 
-void print_factorial(int n) {
-    ((void (*)(int))(function_index_group_test[0]))(n);
+int add(int a, int b) {
+    return ((int (*)(int, int))(function_index_group_test[0]))(a, b);
 }
 
 
-int add(int a, int b) {
-    return ((int (*)(int, int))(function_index_group_test[1]))(a, b);
+void print_factorial(int n) {
+    ((void (*)(int))(function_index_group_test[1]))(n);
 }
 
