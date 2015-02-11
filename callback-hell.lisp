@@ -70,7 +70,13 @@
                   #-sbcl
                   (,callback-name ,@args)
                   #+sbcl
-                  (error "Cannot recursively call a callback.")))
+                  (cffi:foreign-funcall-pointer
+                   ;; Should we attempt to store this somewhere for
+                   ;; extra efficiency?
+                   (cffi:get-callback ',callback-name)
+                   ()
+                   ,@(mapcan #'reverse args-and-types)
+                   ,return-type)))
            (declare (inline ,name)
                     (ignorable (function ,name)))
            ,@body))
