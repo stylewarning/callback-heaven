@@ -83,8 +83,16 @@
                                 :return-type ',return-type
                                 :arguments ',args-and-types))
        
-       ;; TODO? Maybe need to call update-foreign-function-index. In
-       ;; CCL, the pointers seem to persist across redefinitions.
+       ;; Neither CCL nor LispWorks need an update here, since the
+       ;; pointers seem to persist across redefinitions. It's not
+       ;; unsafe to do it anyway, however.
+       ;;
+       ;; NOTE: This only updates EXISTING definitions. Any additional
+       ;; ones will require modification of the C translation data
+       ;; structure, as well as regeneration of the C libraries.
+       (let ((ctrans (gethash (api-group ',group-name) *api-group-translations*)))
+         (when ctrans
+           (update-foreign-function-index ctrans)))
        
        ',name)))
 
