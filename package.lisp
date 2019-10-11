@@ -1,7 +1,7 @@
 ;;;; package.lisp
 ;;;;
-;;;; Copyright (c) 2015 Robert Smith <quad@symbo1ics.com>
+;;;; Copyright (c) 2015 Robert Smith
 
-(defpackage #:callback-hell
+(defpackage #:callback-heaven
   (:use #:cl))
 

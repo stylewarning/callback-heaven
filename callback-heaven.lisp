@@ -1,8 +1,8 @@
-;;;; callback-hell.lisp
+;;;; callback-heaven.lisp
 ;;;;
-;;;; Copyright (c) 2015 Robert Smith <quad@symbo1ics.com>
+;;;; Copyright (c) 2015 Robert Smith
 
-(in-package #:callback-hell)
+(in-package #:callback-heaven)
 
 (defvar *api-groups* (make-hash-table :test 'eq))
 
