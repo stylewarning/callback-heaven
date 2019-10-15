@@ -1,4 +1,4 @@
-;;;; callback-hell.asd
+;;;; callback-heaven.asd
 ;;;;
 ;;;; Copyright (c) 2015 Robert Smith
 
