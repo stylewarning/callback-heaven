@@ -7,8 +7,9 @@
   (:export
    #:define-api-group                   ; MACRO
    #:define-api-function                ; MACRO
-   #:compute-c-space-translations       ; FUNCTION
+   #:compute-c-space-translation        ; FUNCTION
    #:emit-library-files                 ; FUNCTION
+   #:api-group
    )
   (:documentation "Functionality to write and emit C compatible libraries of functions."))
 
