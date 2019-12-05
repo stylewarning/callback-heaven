@@ -8,7 +8,7 @@
   :license "BSD 3-clause (See LICENSE.txt)"
   :depends-on (#:cffi #:alexandria #:callback-heaven)
   :serial t
-  :components ((:module "examples"
+  :components ((:module "example"
                 :serial t
                 :components
                 ((:file "package")
