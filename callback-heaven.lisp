@@ -232,18 +232,20 @@ Note that this memory is not further managed!"
 
 (defun emit-api-function-prototype (api-function stream)
   (flet ((format-arg (arg-and-type)
-           (format nil "~A ~A"
+           (format nil "~A~:[~; ~]~A"
                    (type-name-to-foreign (second arg-and-type))
+                   (%need-space-p arg-and-type)
                    (cffi:translate-name-to-foreign (first arg-and-type) nil))))
-    (format stream "~A ~A(~{~A~^, ~})"
+    (format stream "~A~:[ ~;~]~A(~{~A~^, ~})"
             (type-name-to-foreign (api-function-return-type api-function))
+            (listp (api-function-return-type api-function))
             (api-function-c-name api-function)
             (mapcar #'format-arg (api-function-arguments api-function)))))
 
 (defun emit-api-function-header (ctrans stream)
   ;; Emit the function index setter.
   (terpri stream)
-  (format stream "void ~A(void** functions);~%"
+  (format stream "void ~A(void **functions);~%"
           (function-index-setter-function-name ctrans))
   
   ;; Emit all of the API prototypes.

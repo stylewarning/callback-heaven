@@ -55,6 +55,11 @@
     (:boolean "int")
     (:string "char*")))
 
+(defun %need-space-p (name)
+  (and (second name)
+       (not (typep (second name) 'list))
+       (not (eq ':pointer (second name)))))
+
 (defun type-name-to-foreign (name)
   (labels ((simple-name-p (name)
              (symbolp name))
@@ -69,8 +74,9 @@
       ((listp name) (case (first name)
                       ((:struct) (format nil "struct ~A"
                                          (cffi:translate-name-to-foreign (second name) nil)))
-                      ((:pointer) (format nil "~A *"
-                                          (type-name-to-foreign (second name))))
+                      ((:pointer) (format nil "~A~:[~; ~]*"
+                                          (type-name-to-foreign (second name))
+                                          (%need-space-p name)))
                       ((:function)
                        (destructuring-bind (return-type &rest arg-types)
                            (rest name)
