@@ -102,7 +102,7 @@ For example:
   (check-type c-name (or null string))
   (when (null c-name)
     (setf c-name (cffi:translate-name-to-foreign name nil)))
-  
+
   (let* ((api-group (api-group group-name))
          (current-api-function (api-group-function api-group name))
          (callback-name (if current-api-function
@@ -126,7 +126,7 @@ For example:
            (declare (inline ,name)
                     (ignorable (function ,name)))
            ,@body))
-       
+
        (setf (api-group-function (api-group ',group-name) ',name)
              (make-api-function :name ',name
                                 :callback-name ',callback-name
@@ -134,7 +134,7 @@ For example:
                                 :c-name ,c-name
                                 :return-type ',return-type
                                 :arguments ',args-and-types))
-       
+
        ;; Neither CCL nor LispWorks need an update here, since the
        ;; pointers seem to persist across redefinitions. It's not
        ;; unsafe to do it anyway, however.
@@ -145,7 +145,7 @@ For example:
        (let ((ctrans (gethash (api-group ',group-name) *api-group-translations*)))
          (when ctrans
            (update-foreign-function-index ctrans)))
-       
+
        ',name)))
 
 ;;;;;;;;;;;;;;;;;;;;;;; TRAMPOLINE GENERATION ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -247,7 +247,7 @@ Note that this memory is not further managed!"
   (terpri stream)
   (format stream "void ~A(void **functions);~%"
           (function-index-setter-function-name ctrans))
-  
+
   ;; Emit all of the API prototypes.
   (loop :with api-group := (c-space-translation-api-group ctrans)
         :for fname :across (c-space-translation-index-translations ctrans)
@@ -331,5 +331,5 @@ The C file may be compiled either as a shared library or as a part of a larger s
                                    :if-exists if-exists)
       (format stream "#include \"~A\"~%~%" (file-namestring h-file))
       (emit-c-file-contents ctrans stream))
-    
+
     (values c-file h-file)))
