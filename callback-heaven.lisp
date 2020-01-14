@@ -299,9 +299,9 @@ Note that this memory is not further managed!"
 (defun emit-h-file-contents (ctrans stream)
   (let ((guard (format nil "GROUP_~A_HEADER_GUARD"
                        (string-upcase
-                        (symbol-name
-                         (api-group-name
-                          (c-space-translation-api-group ctrans)))))))
+                        (cffi:translate-name-to-foreign
+                         (api-group-name (c-space-translation-api-group ctrans))
+                         nil)))))
     (format stream "#ifndef ~A~%" guard)
     (format stream "#define ~A~%~%" guard)
     (emit-includes stream)
