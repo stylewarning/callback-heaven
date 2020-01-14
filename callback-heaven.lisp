@@ -306,7 +306,7 @@ Note that this memory is not further managed!"
     (format stream "#define ~A~%~%" guard)
     (emit-includes stream)
     (emit-api-function-header ctrans stream)
-    (format stream "~&~%~%#endif /* ~A */" guard)))
+    (format stream "~&~%~%#endif /* ~A */~%" guard)))
 
 ;;; Helper for EMIT-LIBRARY-FILES.
 (defun emit-c-file-contents (ctrans stream)
