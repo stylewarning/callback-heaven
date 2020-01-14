@@ -8,6 +8,7 @@
    #:define-api-group                   ; MACRO
    #:define-api-function                ; MACRO
    #:compute-c-space-translation        ; FUNCTION
+   #:c-space-translation-function-index ; FUNCTION
    #:emit-library-files                 ; FUNCTION
    #:api-group
    )
