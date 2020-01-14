@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 
-void set_function_index_group_example(void** functions);
+void set_function_index_group_example(void **functions);
 
 int add(int a, int b);
 
