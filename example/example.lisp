@@ -54,7 +54,7 @@
 ;;
 ;; (defun set-group-example-index ()
 ;;   (%set-function-index-group-example
-;;    (callback-heaven::c-space-translation-function-index *ctrans*)))
+;;    (c-space-translation-function-index *ctrans*)))
 ;;
 ;; (set-group-example-index)
 
