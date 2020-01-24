@@ -257,7 +257,12 @@ Note that this memory is not further managed!"
             (write-char #\; stream)
             (terpri stream)))
 
-(defun emit-api-function-definitions (ctrans stream &key prefix postfix)
+(defvar *api-function-definition-prefix*  nil)
+(defvar *api-function-definition-postfix* nil)
+
+(defun emit-api-function-definitions (ctrans stream &key
+                                        (prefix  *api-function-definition-prefix*)
+                                        (postfix *api-function-definition-postfix*))
   (let ((index-translations (c-space-translation-index-translations ctrans))
         (api-group (c-space-translation-api-group ctrans)))
     (loop :for i :from 0
@@ -268,7 +273,9 @@ Note that this memory is not further managed!"
               (format stream " {~%")
               (format stream "    ~A ret;~%" (type-name-to-foreign (api-function-return-type f)))
               (when prefix
-                (format stream "    ~A~%" prefix))
+                (if (functionp prefix)
+                    (funcall prefix stream ctrans f)
+                    (format stream "    ~A~%" prefix)))
               (format stream "    ret = ((~A)(~A[~D]))(~{~A~^, ~});~%"
                       (type-name-to-foreign (api-function-type f))
                       (c-space-translation-function-index-c-name ctrans)
@@ -276,7 +283,9 @@ Note that this memory is not further managed!"
                       (mapcar (lambda (name) (cffi:translate-name-to-foreign name nil))
                               (mapcar #'first (api-function-arguments f))))
               (when postfix
-                (format stream "    ~A~%" postfix))
+                (if (functionp postfix)
+                    (funcall postfix stream ctrans f)
+                    (format stream "    ~A~%" postfix)))
               (format stream "    return ret;~%")
               (format stream "}~%~%"))))
 
