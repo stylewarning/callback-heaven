@@ -257,12 +257,12 @@ Note that this memory is not further managed!"
             (write-char #\; stream)
             (terpri stream)))
 
-(defvar *api-function-definition-prefix*  nil)
-(defvar *api-function-definition-postfix* nil)
+(defvar *api-function-body-prefix*  nil)
+(defvar *api-function-body-postfix* nil)
 
 (defun emit-api-function-definitions (ctrans stream &key
-                                        (prefix  *api-function-definition-prefix*)
-                                        (postfix *api-function-definition-postfix*))
+                                        (prefix  *api-function-body-prefix*)
+                                        (postfix *api-function-body-postfix*))
   (let ((index-translations (c-space-translation-index-translations ctrans))
         (api-group (c-space-translation-api-group ctrans)))
     (loop :for i :from 0
