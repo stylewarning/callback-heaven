@@ -257,7 +257,12 @@ Note that this memory is not further managed!"
             (write-char #\; stream)
             (terpri stream)))
 
-(defun emit-api-function-definitions (ctrans stream)
+(defvar *api-function-body-prefix*  nil)
+(defvar *api-function-body-postfix* nil)
+
+(defun emit-api-function-definitions (ctrans stream &key
+                                        (prefix  *api-function-body-prefix*)
+                                        (postfix *api-function-body-postfix*))
   (let ((index-translations (c-space-translation-index-translations ctrans))
         (api-group (c-space-translation-api-group ctrans)))
     (loop :for i :from 0
@@ -265,21 +270,24 @@ Note that this memory is not further managed!"
           :for f := (api-group-function api-group fname)
           :do (terpri stream)
               (emit-api-function-prototype f stream)
-              (write-string " {" stream)
-              (terpri stream)
-              (format stream "~4T")
-              (unless (eq :void (api-function-return-type f))
-                (write-string "return " stream))
-              (format stream "((~A)(~A[~D]))(~{~A~^, ~});"
+              (format stream " {~%")
+              (format stream "    ~A ret;~%" (type-name-to-foreign (api-function-return-type f)))
+              (when prefix
+                (if (functionp prefix)
+                    (funcall prefix stream ctrans f)
+                    (format stream "    ~A~%" prefix)))
+              (format stream "    ret = ((~A)(~A[~D]))(~{~A~^, ~});~%"
                       (type-name-to-foreign (api-function-type f))
                       (c-space-translation-function-index-c-name ctrans)
                       i
                       (mapcar (lambda (name) (cffi:translate-name-to-foreign name nil))
                               (mapcar #'first (api-function-arguments f))))
-              (terpri stream)
-              (write-string "}" stream)
-              (terpri stream)
-              (terpri stream))))
+              (when postfix
+                (if (functionp postfix)
+                    (funcall postfix stream ctrans f)
+                    (format stream "    ~A~%" postfix)))
+              (format stream "    return ret;~%")
+              (format stream "}~%~%"))))
 
 (defun emit-function-index-definition (ctrans stream)
   (let ((idx-var (c-space-translation-function-index-c-name ctrans))
