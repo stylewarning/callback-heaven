@@ -271,12 +271,14 @@ Note that this memory is not further managed!"
           :do (terpri stream)
               (emit-api-function-prototype f stream)
               (format stream " {~%")
-              (format stream "    ~A ret;~%" (type-name-to-foreign (api-function-return-type f)))
+              (unless (eq :void (api-function-return-type f))
+                (format stream "    ~A ret;~%" (type-name-to-foreign (api-function-return-type f))))
               (when prefix
                 (if (functionp prefix)
                     (funcall prefix stream ctrans f)
                     (format stream "    ~A~%" prefix)))
-              (format stream "    ret = ((~A)(~A[~D]))(~{~A~^, ~});~%"
+              (format stream "    ~:[ret = ~;~]((~A)(~A[~D]))(~{~A~^, ~});~%"
+                      (eq :void (api-function-return-type f))
                       (type-name-to-foreign (api-function-type f))
                       (c-space-translation-function-index-c-name ctrans)
                       i
@@ -286,7 +288,8 @@ Note that this memory is not further managed!"
                 (if (functionp postfix)
                     (funcall postfix stream ctrans f)
                     (format stream "    ~A~%" postfix)))
-              (format stream "    return ret;~%")
+              (unless (eq :void (api-function-return-type f))
+                (format stream "    return ret;~%"))
               (format stream "}~%~%"))))
 
 (defun emit-function-index-definition (ctrans stream)
