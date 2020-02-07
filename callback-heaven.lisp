@@ -224,12 +224,6 @@ Note that this memory is not further managed!"
                                           (cffi:translate-name-to-foreign (api-group-name api-group) nil))
            :function-index function-index))))
 
-
-(defvar *default-includes* (list "<stdint.h>" "<stddef.h>"))
-
-(defun emit-includes (stream)
-  (format stream "~{#include ~A~^~%~}~%~%" *default-includes*))
-
 (defun emit-api-function-prototype (api-function stream)
   (flet ((format-arg (arg-and-type)
            (format nil "~A~:[~; ~]~A"
@@ -303,8 +297,12 @@ Note that this memory is not further managed!"
             (function-index-setter-function-name ctrans)
             idx-var)))
 
+(defun emit-includes (stream includes)
+  (unless (endp includes)
+    (format stream "~{#include ~A~^~%~}~%~%" includes)))
+
 ;;; Helper for EMIT-LIBRARY-FILES.
-(defun emit-h-file-contents (ctrans stream)
+(defun emit-h-file-contents (ctrans stream &key extra-includes)
   (let ((guard (format nil "GROUP_~A_HEADER_GUARD"
                        (string-upcase
                         (cffi:translate-name-to-foreign
@@ -312,12 +310,14 @@ Note that this memory is not further managed!"
                          nil)))))
     (format stream "#ifndef ~A~%" guard)
     (format stream "#define ~A~%~%" guard)
-    (emit-includes stream)
+    (emit-includes stream (list* "<stdint.h>" "<stddef.h>" extra-includes))
     (emit-api-function-header ctrans stream)
     (format stream "~&~%~%#endif /* ~A */~%" guard)))
 
 ;;; Helper for EMIT-LIBRARY-FILES.
-(defun emit-c-file-contents (ctrans stream &key prefix postfix)
+(defun emit-c-file-contents (ctrans stream h-file &key prefix postfix extra-includes)
+  (emit-includes stream (cons (format nil "~S" (file-namestring h-file))
+                              extra-includes))
   (emit-function-index-definition ctrans stream)
   (emit-api-function-definitions ctrans stream :prefix prefix :postfix postfix))
 
@@ -325,6 +325,8 @@ Note that this memory is not further managed!"
 
 (defun emit-library-files (ctrans c-file h-file
                            &key (if-exists ':supersede)
+                                (extra-c-file-includes '())
+                                (extra-h-file-includes '())
                                 (function-body-prefix nil)
                                 (function-body-postfix nil))
   "Emit a header file H-FILE and a C file C-FILE for the C space translations CTRANS.
@@ -332,6 +334,10 @@ Note that this memory is not further managed!"
 The C file may be compiled either as a shared library or as a part of a larger system. Its \"exports\" are in the header file.
 
 * IF-EXISTS is an argument passed to OPEN.
+
+* EXTRA-C-FILE-INCLUDES is a LIST of STRINGs indicating extra files that should be included in C-FILE.
+
+* EXTRA-H-FILE-INCLUDES is a LIST of STRINGs indicating extra files that should be included in H-FILE.
 
 * FUNCTION-BODY-PREFIX allows the caller to specify a prefix to be added to each API-FUNCTION definition emitted in C-FILE.
   * If a STRING, it is inserted verbatim at the beginning of each API-FUNCTION.
@@ -344,12 +350,14 @@ The C file may be compiled either as a shared library or as a part of a larger s
     (with-open-file (stream h-file :direction ':output
                                    :if-does-not-exist ':create
                                    :if-exists if-exists)
-      (emit-h-file-contents ctrans stream))
+      (emit-h-file-contents ctrans stream :extra-includes extra-h-file-includes))
 
     (with-open-file (stream c-file :direction ':output
                                    :if-does-not-exist ':create
                                    :if-exists if-exists)
-      (format stream "#include \"~A\"~%~%" (file-namestring h-file))
-      (emit-c-file-contents ctrans stream :prefix function-body-prefix :postfix function-body-postfix))
+      (emit-c-file-contents ctrans stream h-file
+                            :prefix function-body-prefix
+                            :postfix function-body-postfix
+                            :extra-includes extra-c-file-includes))
 
     (values c-file h-file)))
