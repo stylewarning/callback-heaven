@@ -257,12 +257,9 @@ Note that this memory is not further managed!"
             (write-char #\; stream)
             (terpri stream)))
 
-(defvar *api-function-body-prefix*  nil)
-(defvar *api-function-body-postfix* nil)
-
 (defun emit-api-function-definitions (ctrans stream &key
-                                        (prefix  *api-function-body-prefix*)
-                                        (postfix *api-function-body-postfix*))
+                                        (prefix  nil)
+                                        (postfix nil))
   (let ((index-translations (c-space-translation-index-translations ctrans))
         (api-group (c-space-translation-api-group ctrans)))
     (loop :for i :from 0
@@ -320,16 +317,28 @@ Note that this memory is not further managed!"
     (format stream "~&~%~%#endif /* ~A */~%" guard)))
 
 ;;; Helper for EMIT-LIBRARY-FILES.
-(defun emit-c-file-contents (ctrans stream)
+(defun emit-c-file-contents (ctrans stream &key prefix postfix)
   (emit-function-index-definition ctrans stream)
-  (emit-api-function-definitions ctrans stream))
+  (emit-api-function-definitions ctrans stream :prefix prefix :postfix postfix))
 
 
 
-(defun emit-library-files (ctrans c-file h-file &key (if-exists ':supersede))
-  "Emit a header file H-FILE and a C file C-FILE for the C space translations CTRANS. (IF-EXISTS is an argument passed to OPEN.)
+(defun emit-library-files (ctrans c-file h-file
+                           &key (if-exists ':supersede)
+                                (function-body-prefix nil)
+                                (function-body-postfix nil))
+  "Emit a header file H-FILE and a C file C-FILE for the C space translations CTRANS.
 
-The C file may be compiled either as a shared library or as a part of a larger system. Its \"exports\" are in the header file."
+The C file may be compiled either as a shared library or as a part of a larger system. Its \"exports\" are in the header file.
+
+* IF-EXISTS is an argument passed to OPEN.
+
+* FUNCTION-BODY-PREFIX allows the caller to specify a prefix to be added to each API-FUNCTION definition emitted in C-FILE.
+  * If a STRING, it is inserted verbatim at the beginning of each API-FUNCTION.
+  * If a FUNCTION, it will be called with three arguments: 1) the STREAM on which to write the prefix, 2) the current C-SPACE-TRANSLATION, and 3) the current API-FUNCTION.
+  * If NULL, no prefix will be emitted.
+
+* FUNCTION-BODY-POSTFIX is just like FUNCTION-BODY-PREFIX, but for adding user code near the end of each API-FUNCTION, just before returning."
   (let ((c-file (pathname c-file))
         (h-file (pathname h-file)))
     (with-open-file (stream h-file :direction ':output
@@ -341,6 +350,6 @@ The C file may be compiled either as a shared library or as a part of a larger s
                                    :if-does-not-exist ':create
                                    :if-exists if-exists)
       (format stream "#include \"~A\"~%~%" (file-namestring h-file))
-      (emit-c-file-contents ctrans stream))
+      (emit-c-file-contents ctrans stream :prefix function-body-prefix :postfix function-body-postfix))
 
     (values c-file h-file)))
