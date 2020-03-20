@@ -10,7 +10,9 @@ void set_function_index_group_example(void **functions) {
 
 
 int add(int a, int b) {
-    return ((int (*)(int, int))(function_index_group_example[0]))(a, b);
+    int ret;
+    ret = ((int (*)(int, int))(function_index_group_example[0]))(a, b);
+    return ret;
 }
 
 

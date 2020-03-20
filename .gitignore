@@ -2,3 +2,4 @@
 *.so
 *.dylib
 *.fasl
+system-index.txt
