@@ -237,11 +237,6 @@ Note that this memory is not further managed!"
             (mapcar #'format-arg (api-function-arguments api-function)))))
 
 (defun emit-api-function-header (ctrans stream)
-  ;; Emit the function index setter.
-  (terpri stream)
-  (format stream "void ~A(void **functions);~%"
-          (function-index-setter-function-name ctrans))
-
   ;; Emit all of the API prototypes.
   (loop :with api-group := (c-space-translation-api-group ctrans)
         :for fname :across (c-space-translation-index-translations ctrans)
