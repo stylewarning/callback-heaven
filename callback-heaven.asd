@@ -6,7 +6,7 @@
   :description "A framework for calling Lisp from C."
   :author "Robert Smith <robert@stylewarning.com>"
   :license "BSD 3-clause (See LICENSE.txt)"
-  :depends-on (#:cffi #:alexandria)
+  :depends-on (#:cffi #:alexandria #:uiop)
   :serial t
   :components ((:file "package")
                (:file "utilities")

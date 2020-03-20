@@ -32,4 +32,4 @@ test: libexample.$(SOEXT)
 		--quit
 
 clean:
-	rm -f *.o *.$(SOEXT)
+	rm -f *.o *.$(SOEXT) example.[ch]
