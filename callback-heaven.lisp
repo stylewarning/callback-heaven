@@ -22,15 +22,22 @@
 (defstruct api-group
   "An API-GROUP is a named set of C-compatible Lisp functions. These functions are described by the API-FUNCTION structure."
   (name nil :type symbol :read-only t)
+  (documentation nil :type (or null string))
   ;; FUNCTION-TABLE is a hash table mapping symbols to API-FUNCTIONs.
   (function-table nil :type hash-table :read-only t))
 
-(defun find-or-make-api-group (group-name)
+(defun find-or-make-api-group (group-name &optional (documentation nil docp))
   "Find the API group designated by the name GROUP-NAME, or make it if it doesn't exist."
-  (let ((ag (api-group group-name)))
-    (or ag (setf (api-group group-name)
+  (multiple-value-bind (ag foundp) (api-group group-name)
+    (cond (foundp
+           (when docp
+             (setf (api-group-documentation ag) documentation))
+           ag)
+          (t
+           (setf (api-group group-name)
                  (make-api-group :name group-name
-                                 :function-table (make-hash-table :test 'eq))))))
+                                 :documentation documentation
+                                 :function-table (make-hash-table :test 'eq)))))))
 
 (defun api-group-function (group function-name)
   "Given an API group GROUP, look up the function named FUNCTION-NAME. Return NIL if not found."
@@ -42,11 +49,11 @@
   (setf (gethash function-name (api-group-function-table group))
         new-value))
 
-(defmacro define-api-group (name)
+(defmacro define-api-group (name &optional (documentation nil docp))
   "Declare the existence of the API group named NAME. Intended as a top-level form."
   (check-type name symbol)
   `(progn
-     (find-or-make-api-group ',name)
+     (find-or-make-api-group ',name ,@(if docp (list documentation) nil))
      ',name))
 
 
@@ -59,6 +66,8 @@
   "A representation of a Lisp function that is callable from C."
   ;; The Lisp name of the function, which can only be referenced recursively.
   (name          nil :type symbol               :read-only t)
+  ;; The documentation string.
+  (documentation nil :type (or null string)     :read-only t)
   ;; The name of the callback.
   (callback-name nil :type symbol               :read-only t)
   ;; A pointer to the callback function.
@@ -109,44 +118,48 @@ For example:
                             (api-function-callback-name current-api-function)
                             (gensym (symbol-name name))))
          (args (mapcar #'first args-and-types)))
-    `(progn
-       (cffi:defcallback ,callback-name ,return-type ,args-and-types
-         ;; Ensure we can do a recursive call.
-         (flet ((,name ,args
-                  #-sbcl
-                  (,callback-name ,@args)
-                  #+sbcl
-                  (cffi:foreign-funcall-pointer
+    (multiple-value-bind (body declarations documentation)
+        (alexandria:parse-body body :documentation t)
+      `(progn
+         (cffi:defcallback ,callback-name ,return-type ,args-and-types
+           ,@(if documentation (list documentation) nil)
+           ;; Ensure we can do a recursive call.
+           (flet ((,name ,args
+                    #-sbcl
+                    (,callback-name ,@args)
+                    #+sbcl
+                    (cffi:foreign-funcall-pointer
                    ;; Should we attempt to store this somewhere for
                    ;; extra efficiency?
-                   (cffi:get-callback ',callback-name)
-                   ()
-                   ,@(mapcan #'reverse args-and-types)
-                   ,return-type)))
-           (declare (inline ,name)
-                    (ignorable (function ,name)))
-           ,@body))
+                     (cffi:get-callback ',callback-name)
+                     ()
+                     ,@(mapcan #'reverse args-and-types)
+                     ,return-type)))
+             (declare (inline ,name)
+                      (ignorable (function ,name)))
+             ,@body))
 
-       (setf (api-group-function (api-group ',group-name) ',name)
-             (make-api-function :name ',name
-                                :callback-name ',callback-name
-                                :pointer (cffi:get-callback ',callback-name)
-                                :c-name ,c-name
-                                :return-type ',return-type
-                                :arguments ',args-and-types))
+         (setf (api-group-function (api-group ',group-name) ',name)
+               (make-api-function :name ',name
+                                  :callback-name ',callback-name
+                                  :pointer (cffi:get-callback ',callback-name)
+                                  :c-name ,c-name
+                                  :return-type ',return-type
+                                  :arguments ',args-and-types
+                                  :documentation ,documentation))
 
-       ;; Neither CCL nor LispWorks need an update here, since the
-       ;; pointers seem to persist across redefinitions. It's not
-       ;; unsafe to do it anyway, however.
-       ;;
-       ;; NOTE: This only updates EXISTING definitions. Any additional
-       ;; ones will require modification of the C translation data
-       ;; structure, as well as regeneration of the C libraries.
-       (let ((ctrans (gethash (api-group ',group-name) *api-group-translations*)))
-         (when ctrans
-           (update-foreign-function-index ctrans)))
+         ;; Neither CCL nor LispWorks need an update here, since the
+         ;; pointers seem to persist across redefinitions. It's not
+         ;; unsafe to do it anyway, however.
+         ;;
+         ;; NOTE: This only updates EXISTING definitions. Any additional
+         ;; ones will require modification of the C translation data
+         ;; structure, as well as regeneration of the C libraries.
+         (let ((ctrans (gethash (api-group ',group-name) *api-group-translations*)))
+           (when ctrans
+             (update-foreign-function-index ctrans)))
 
-       ',name)))
+         ',name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; TRAMPOLINE GENERATION ;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -224,6 +237,20 @@ Note that this memory is not further managed!"
                                           (cffi:translate-name-to-foreign (api-group-name api-group) nil))
            :function-index function-index))))
 
+(defun emit-documentation (documentation stream)
+  (alexandria:when-let ((lines (and documentation
+                                    (uiop:split-string documentation :separator '(#\Newline)))))
+    ;; No need for an (ENDP LINES) clause here. LINES must be non-NULL due to the WHEN-LET above.
+    (cond ((endp (rest lines))
+           (format stream "/** ~A */~%" (first lines)))
+          (t
+           (format stream "/**~%")
+           (dolist (line lines)
+             (if (string= "" line)
+                 (format stream " *~%")
+                 (format stream " * ~A~%" line)))
+           (format stream " */~%")))))
+
 (defun emit-api-function-prototype (api-function stream)
   (flet ((format-arg (arg-and-type)
            (format nil "~A~:[~; ~]~A"
@@ -242,6 +269,7 @@ Note that this memory is not further managed!"
         :for fname :across (c-space-translation-index-translations ctrans)
         :for f := (api-group-function api-group fname)
         :do (terpri stream)
+            (emit-documentation (api-function-documentation f) stream)
             (emit-api-function-prototype f stream)
             (write-char #\; stream)
             (terpri stream)))
@@ -298,11 +326,13 @@ Note that this memory is not further managed!"
 
 ;;; Helper for EMIT-LIBRARY-FILES.
 (defun emit-h-file-contents (ctrans stream &key extra-includes)
-  (let ((guard (format nil "GROUP_~A_HEADER_GUARD"
-                       (string-upcase
-                        (cffi:translate-name-to-foreign
-                         (api-group-name (c-space-translation-api-group ctrans))
-                         nil)))))
+  (let* ((api-group (c-space-translation-api-group ctrans))
+         (guard (format nil "GROUP_~A_HEADER_GUARD"
+                        (string-upcase
+                         (cffi:translate-name-to-foreign
+                          (api-group-name api-group)
+                          nil)))))
+    (emit-documentation (api-group-documentation api-group) stream)
     (format stream "#ifndef ~A~%" guard)
     (format stream "#define ~A~%~%" guard)
     (emit-includes stream (list* "<stdint.h>" "<stddef.h>" extra-includes))

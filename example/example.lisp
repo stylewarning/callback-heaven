@@ -7,12 +7,29 @@
 ;; First define your API group, and its API functions.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (define-api-group example))
+  (define-api-group example
+    ;; This documentation string will be included at the top of the .h
+    ;; file that is generated for this API-GROUP. Here, we show an
+    ;; example of a doxygen @file directive, but there is no requirement
+    ;; to use doxygen syntax. CALLBACK-HEAVEN simply treats these as an
+    ;; opaque string and emits them between C-style comment delimiters,
+    ;; beginning with /** and ending with */.
+    "@file example.h
+
+An example group."))
 
 (define-api-function (add example) :int ((a :int) (b :int))
+  "Return the integer a + b."
   (ldb '#.(byte 32 0) (+ a b)))
 
 (define-api-function (print-factorial example) :void ((n :int))
+  "Print |n|! on standard output.
+
+The complete output will look something like
+
+    Factorial 5 = 120
+
+@param n the integer whose absolute value will be used to compute the factorial."
   (flet ((factorial (n)
            (let ((result 1))
              (loop :for i :from 1 :to n :do
